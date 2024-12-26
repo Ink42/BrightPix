@@ -2,6 +2,7 @@
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:gal/gal.dart';
 
 void main(){
   runApp(
@@ -21,9 +22,25 @@ class landingSection extends StatefulWidget {
   State<landingSection> createState() => _landingSectionState();
 }
 
-class _landingSectionState extends State<landingSection> {
+class _landingSectionState extends State<landingSection> with WidgetsBindingObserver {
   List<CameraDescription> cameras = [];
   CameraController? controller;
+
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // TODO: implement didChangeAppLifecycleState
+    super.didChangeAppLifecycleState(state);
+    if (controller == null|| controller?.value.isInitialized == false ){
+      return;
+    }
+    if (state == AppLifecycleState.inactive){
+      controller?.dispose();
+    }
+    else if (state == AppLifecycleState.resumed){
+      _setupCameraController();
+    }
+  }
   @override
   void initState() {
     // TODO: implement initState
@@ -46,10 +63,15 @@ class _landingSectionState extends State<landingSection> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          CameraPreview(controller!)
-
+          CameraPreview(controller!),
+        IconButton(onPressed: ()async{
+          XFile pic = await controller!.takePicture();
+          Gal.putImage(pic.path);
+        }
+        , icon: Icon(Icons.camera,size: 100,))
       ],),
-    ));
+    )
+    );
   }
   Future<void> _setupCameraController()async{
     List<CameraDescription> _cameras = await availableCameras();
@@ -61,9 +83,13 @@ class _landingSectionState extends State<landingSection> {
         cameras.first, 
         ResolutionPreset.high);
         controller?.initialize().then((_){
+          if (!mounted){return;
+          }
           setState(() {
             
           });
+        }).catchError((Object e){
+          print(e);
         });
     }
   }
